@@ -1,0 +1,15 @@
+TRAINING_AUDIO_PIPELINE.txt
+============================
+Training mode was changed to a strict one-utterance-at-a-time pipeline:
+
+1. Child speaks.
+2. VAD detects end of speech.
+3. Microphone is immediately hard-muted.
+4. Whisper decodes only that captured utterance.
+5. Exactly one feedback response is played: "أحسنت" or "حاول مرة أخرى".
+6. Microphone remains muted until the response finishes.
+7. The next target starts only after the response.
+
+This prevents the previous microphone/TTS overlap and stale second-utterance problem.
+The default VAD end silence was reduced to 220 ms, minimum voiced time to 180 ms,
+minimum vowel time to 90 ms, and speech start to 100 ms for faster response.
