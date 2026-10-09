@@ -1,0 +1,43 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'app.talkingcat'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'app.talkingcat'
+        minSdk 26
+        targetSdk 34
+        versionCode 39
+        versionName '8.25-training'
+        ndk { abiFilters 'arm64-v8a' }   // الجهاز arm64 فقط، لتصغير الحجم
+    }
+    buildTypes { release { minifyEnabled false } }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    // نماذج الصوت كبيرة: بلا ضغط لتسريع البناء والنسخ
+    androidResources { noCompress 'onnx', 'ort', 'txt', 'json', 'mp4' }
+    lint { checkReleaseBuilds false; abortOnError false }
+}
+
+// ملفات محلية يضعها fetch-engine.sh (لا تنزيل أثناء البناء)
+dependencies {
+    implementation files('libs/sherpa-onnx.jar', 'libs/kotlin-stdlib.jar')
+}
+
+// Gradle نفسه ينزّل المحرك ونماذج الصوت (مرة واحدة، ثم يُستعمل الكاش) قبل أي شيء آخر.
+tasks.register('fetchEngine', Exec) {
+    def root = rootProject.projectDir
+    onlyIf {
+        !new File(root, 'app/libs/.engine-supertonic').exists() ||
+        !new File(root, 'app/libs/sherpa-onnx.jar').exists() ||
+        !new File(root, 'app/libs/kotlin-stdlib.jar').exists() ||
+        !new File(root, 'app/src/main/assets/models/tts-ar').isDirectory() ||
+        !(new File(root, 'app/src/main/assets/models').listFiles()?.any { it.isDirectory() && it.name.startsWith('asr-') && it.name != 'asr-ar' }) ||
+        !new File(root, 'app/src/main/jniLibs/arm64-v8a').isDirectory()
+    }
+    workingDir root
+    commandLine 'bash', new File(root, 'fetch-engine.sh').absolutePath
+}
+tasks.named('preBuild') { dependsOn 'fetchEngine' }
